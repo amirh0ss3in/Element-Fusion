@@ -1,10 +1,15 @@
 import pygame
 import random
 import sys
+import os
 
 pygame.init()
+infoObject = pygame.display.Info()
 
-WIDTH, HEIGHT = 600, 700
+disp = min(infoObject.current_w, infoObject.current_h)
+WIDTH, HEIGHT = disp * 3 // 4, disp * 5 // 6
+
+
 GRID_SIZE = 5
 CELL_SIZE = WIDTH // GRID_SIZE
 BLACK = (0, 0, 0)
