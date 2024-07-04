@@ -9,7 +9,6 @@ infoObject = pygame.display.Info()
 disp = min(infoObject.current_w, infoObject.current_h)
 WIDTH, HEIGHT = disp * 3 // 4, disp * 5 // 6
 
-
 GRID_SIZE = 5
 CELL_SIZE = WIDTH // GRID_SIZE
 BLACK = (0, 0, 0)
@@ -38,6 +37,7 @@ pygame.display.set_caption("Element Fusion")
 
 grid = [[None for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
 score = 0
+game_over = False
 
 def move(direction):
     global score
@@ -99,7 +99,22 @@ def move(direction):
     return moved
 
 def is_game_over():
-    return all(all(cell is not None for cell in row) for row in grid)
+    # Check for empty cells
+    if any(None in row for row in grid):
+        return False
+    
+    # Check for adjacent cells with the same value
+    for y in range(GRID_SIZE):
+        for x in range(GRID_SIZE):
+            current = grid[y][x]
+            # Check right
+            if x < GRID_SIZE - 1 and grid[y][x+1] == current:
+                return False
+            # Check down
+            if y < GRID_SIZE - 1 and grid[y+1][x] == current:
+                return False
+    
+    return True
 
 def add_new_element():
     empty_cells = [(x, y) for x in range(GRID_SIZE) for y in range(GRID_SIZE) if grid[y][x] is None]
@@ -147,11 +162,54 @@ def draw_background():
         b = int(80 + (y / HEIGHT) * 20)
         pygame.draw.line(screen, (r, g, b), (0, y), (WIDTH, y))
 
+def draw_game_over():
+    # Create a semi-transparent overlay
+    overlay = pygame.Surface((WIDTH, HEIGHT))
+    overlay.set_alpha(200)
+    overlay.fill((0, 0, 0))
+    screen.blit(overlay, (0, 0))
+
+    # Create the game over box
+    box_width, box_height = 300, 250
+    box_rect = pygame.Rect((WIDTH - box_width) // 2, (HEIGHT - box_height) // 2, box_width, box_height)
+    pygame.draw.rect(screen, (50, 50, 50), box_rect)
+    pygame.draw.rect(screen, WHITE, box_rect, 3)
+
+    # Game Over text
+    font = pygame.font.Font(pygame.font.match_font('arial'), 48)
+    game_over_text = font.render("Game Over!", True, WHITE)
+    text_rect = game_over_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 60))
+    screen.blit(game_over_text, text_rect)
+
+    # Final Score text
+    font = pygame.font.Font(pygame.font.match_font('arial'), 36)
+    score_text = font.render(f"Final Score: {score}", True, WHITE)
+    score_rect = score_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+    screen.blit(score_text, score_rect)
+
+    # Replay instruction
+    font = pygame.font.Font(pygame.font.match_font('arial'), 24)
+    replay_text = font.render("Press R to replay", True, WHITE)
+    replay_rect = replay_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
+    screen.blit(replay_text, replay_rect)
+
+    # Quit instruction
+    quit_text = font.render("Press Q to quit", True, WHITE)
+    quit_rect = quit_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 80))
+    screen.blit(quit_text, quit_rect)
+
+def reset_game():
+    global grid, score, game_over
+    grid = [[None for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
+    score = 0
+    game_over = False
+    add_new_element()
+    add_new_element()
+
 def main():
-    global score
+    global score, game_over
     clock = pygame.time.Clock()
-    add_new_element()
-    add_new_element()
+    reset_game()
 
     while True:
         for event in pygame.event.get():
@@ -159,29 +217,39 @@ def main():
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
-                moved = False
-                if event.key == pygame.K_LEFT or event.key == pygame.K_a:
-                    moved = move('LEFT')
-                elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
-                    moved = move('RIGHT')
-                elif event.key == pygame.K_UP or event.key == pygame.K_w:
-                    moved = move('UP')
-                elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
-                    moved = move('DOWN')
-                
-                if moved:
-                    add_new_element()
-                
-                if is_game_over():
-                    print(f"Game Over! Final Score: {score}")
-                    pygame.quit()
-                    sys.exit()
+                if not game_over:
+                    moved = False
+                    if event.key == pygame.K_LEFT or event.key == pygame.K_a:
+                        moved = move('LEFT')
+                    elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
+                        moved = move('RIGHT')
+                    elif event.key == pygame.K_UP or event.key == pygame.K_w:
+                        moved = move('UP')
+                    elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
+                        moved = move('DOWN')
+                    
+                    if moved:
+                        add_new_element()
+                    
+                    if is_game_over():
+                        game_over = True
+                        print(f"Game Over! Final Score: {score}")
+                else:
+                    if event.key == pygame.K_r:
+                        reset_game()
+                    elif event.key == pygame.K_q:
+                        pygame.quit()
+                        sys.exit()
 
         draw_background()
         draw_grid()
         font = pygame.font.Font(pygame.font.match_font('arial'), 36)
         score_text = font.render(f"Score: {score}", True, WHITE)
         screen.blit(score_text, (10, HEIGHT - 40))
+        
+        if game_over:
+            draw_game_over()
+
         pygame.display.flip()
         clock.tick(30)
 
